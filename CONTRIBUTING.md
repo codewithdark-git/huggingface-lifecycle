@@ -40,7 +40,7 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.13 or higher
 - Git
 - A HuggingFace account (for testing Hub features)
 
