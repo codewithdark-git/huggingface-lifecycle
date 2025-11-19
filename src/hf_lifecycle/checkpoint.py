@@ -1,0 +1,311 @@
+"""
+Checkpoint management for HuggingFace Lifecycle Manager.
+"""
+import os
+import json
+import torch
+import shutil
+from pathlib import Path
+from typing import Optional, Dict, Any, List, Union
+from datetime import datetime
+import logging
+
+from hf_lifecycle.repo import RepoManager
+from hf_lifecycle.retention import RetentionPolicy, KeepLastN
+from hf_lifecycle.exceptions import (
+    CheckpointError,
+    CheckpointNotFoundError,
+    CheckpointCorruptedError,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class CheckpointManager:
+    """
+    Manages checkpoint saving, loading, and retention for training workflows.
+    """
+
+    def __init__(
+        self,
+        repo_manager: RepoManager,
+        local_dir: str = "./checkpoints",
+        retention_policy: Optional[RetentionPolicy] = None,
+    ):
+        """
+        Initialize the CheckpointManager.
+
+        Args:
+            repo_manager: Repository manager for uploading checkpoints.
+            local_dir: Local directory for storing checkpoints.
+            retention_policy: Policy for managing checkpoint retention.
+                Defaults to KeepLastN(3).
+        """
+        self.repo_manager = repo_manager
+        self.local_dir = Path(local_dir)
+        self.local_dir.mkdir(parents=True, exist_ok=True)
+        self.retention_policy = retention_policy or KeepLastN(3)
+
+    def save(
+        self,
+        model: torch.nn.Module,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[Any] = None,
+        epoch: Optional[int] = None,
+        step: Optional[int] = None,
+        metrics: Optional[Dict[str, float]] = None,
+        custom_state: Optional[Dict[str, Any]] = None,
+        name: Optional[str] = None,
+    ) -> str:
+        """
+        Save a checkpoint with model, optimizer, and other training state.
+
+        Args:
+            model: PyTorch model to save.
+            optimizer: Optimizer state to save.
+            scheduler: Learning rate scheduler state to save.
+            epoch: Current epoch number.
+            step: Current step number.
+            metrics: Dictionary of metrics (e.g., {'loss': 0.5, 'accuracy': 0.9}).
+            custom_state: Any custom state dictionary to save.
+            name: Custom checkpoint name. If None, auto-generates based on step/epoch.
+
+        Returns:
+            Path to the saved checkpoint.
+
+        Raises:
+            CheckpointError: If save fails.
+        """
+        try:
+            # Generate checkpoint name
+            if name is None:
+                if step is not None:
+                    name = f"checkpoint-step-{step}"
+                elif epoch is not None:
+                    name = f"checkpoint-epoch-{epoch}"
+                else:
+                    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                    name = f"checkpoint-{timestamp}"
+
+            checkpoint_dir = self.local_dir / name
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+            # Build checkpoint dictionary
+            checkpoint = {
+                "model_state_dict": model.state_dict(),
+                "epoch": epoch,
+                "step": step,
+                "metrics": metrics or {},
+                "custom_state": custom_state or {},
+                "timestamp": datetime.now().isoformat(),
+            }
+
+            if optimizer is not None:
+                checkpoint["optimizer_state_dict"] = optimizer.state_dict()
+
+            if scheduler is not None:
+                checkpoint["scheduler_state_dict"] = scheduler.state_dict()
+
+            # Save checkpoint
+            checkpoint_path = checkpoint_dir / "checkpoint.pt"
+            torch.save(checkpoint, checkpoint_path)
+
+            # Save metadata separately for easy inspection
+            metadata = {
+                "epoch": epoch,
+                "step": step,
+                "metrics": metrics or {},
+                "timestamp": checkpoint["timestamp"],
+            }
+            metadata_path = checkpoint_dir / "metadata.json"
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
+
+            logger.info(f"Saved checkpoint: {name}")
+            return str(checkpoint_dir)
+
+        except Exception as e:
+            raise CheckpointError(f"Failed to save checkpoint: {e}")
+
+    def load(
+        self,
+        name: str,
+        model: Optional[torch.nn.Module] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[Any] = None,
+        map_location: Optional[Union[str, torch.device]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Load a checkpoint by name.
+
+        Args:
+            name: Name of the checkpoint to load.
+            model: Model to load state into (if provided).
+            optimizer: Optimizer to load state into (if provided).
+            scheduler: Scheduler to load state into (if provided).
+            map_location: Device to map tensors to.
+
+        Returns:
+            Checkpoint dictionary containing all saved state.
+
+        Raises:
+            CheckpointNotFoundError: If checkpoint doesn't exist.
+            CheckpointCorruptedError: If checkpoint is corrupted.
+        """
+        checkpoint_dir = self.local_dir / name
+        checkpoint_path = checkpoint_dir / "checkpoint.pt"
+
+        if not checkpoint_path.exists():
+            raise CheckpointNotFoundError(f"Checkpoint not found: {name}")
+
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location=map_location)
+
+            # Load states if objects provided
+            if model is not None and "model_state_dict" in checkpoint:
+                model.load_state_dict(checkpoint["model_state_dict"])
+                logger.info(f"Loaded model state from {name}")
+
+            if optimizer is not None and "optimizer_state_dict" in checkpoint:
+                optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+                logger.info(f"Loaded optimizer state from {name}")
+
+            if scheduler is not None and "scheduler_state_dict" in checkpoint:
+                scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+                logger.info(f"Loaded scheduler state from {name}")
+
+            return checkpoint
+
+        except Exception as e:
+            raise CheckpointCorruptedError(f"Failed to load checkpoint {name}: {e}")
+
+    def load_latest(
+        self,
+        model: Optional[torch.nn.Module] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[Any] = None,
+        map_location: Optional[Union[str, torch.device]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Load the most recent checkpoint.
+
+        Args:
+            model: Model to load state into.
+            optimizer: Optimizer to load state into.
+            scheduler: Scheduler to load state into.
+            map_location: Device to map tensors to.
+
+        Returns:
+            Checkpoint dictionary, or None if no checkpoints exist.
+        """
+        checkpoints = self.list_checkpoints()
+        if not checkpoints:
+            logger.warning("No checkpoints found")
+            return None
+
+        # Sort by step (or timestamp if no step)
+        latest = max(checkpoints, key=lambda x: x.get("step", 0))
+        return self.load(
+            latest["name"], model, optimizer, scheduler, map_location
+        )
+
+    def load_best(
+        self,
+        metric: str,
+        mode: str = "min",
+        model: Optional[torch.nn.Module] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[Any] = None,
+        map_location: Optional[Union[str, torch.device]] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Load the best checkpoint based on a metric.
+
+        Args:
+            metric: Metric name to use for comparison.
+            mode: 'min' for lower is better, 'max' for higher is better.
+            model: Model to load state into.
+            optimizer: Optimizer to load state into.
+            scheduler: Scheduler to load state into.
+            map_location: Device to map tensors to.
+
+        Returns:
+            Checkpoint dictionary, or None if no checkpoints with metric exist.
+        """
+        checkpoints = self.list_checkpoints()
+        valid_ckpts = [
+            ckpt
+            for ckpt in checkpoints
+            if ckpt.get("metrics") and metric in ckpt["metrics"]
+        ]
+
+        if not valid_ckpts:
+            logger.warning(f"No checkpoints found with metric '{metric}'")
+            return None
+
+        # Find best
+        reverse = mode == "max"
+        best = sorted(
+            valid_ckpts, key=lambda x: x["metrics"][metric], reverse=reverse
+        )[0]
+
+        logger.info(f"Loading best checkpoint by {metric}: {best['name']}")
+        return self.load(best["name"], model, optimizer, scheduler, map_location)
+
+    def list_checkpoints(self) -> List[Dict[str, Any]]:
+        """
+        List all available checkpoints with their metadata.
+
+        Returns:
+            List of checkpoint metadata dictionaries.
+        """
+        checkpoints = []
+
+        if not self.local_dir.exists():
+            return checkpoints
+
+        for checkpoint_dir in self.local_dir.iterdir():
+            if not checkpoint_dir.is_dir():
+                continue
+
+            metadata_path = checkpoint_dir / "metadata.json"
+            if metadata_path.exists():
+                try:
+                    with open(metadata_path, "r") as f:
+                        metadata = json.load(f)
+                    metadata["name"] = checkpoint_dir.name
+                    checkpoints.append(metadata)
+                except Exception as e:
+                    logger.warning(f"Failed to read metadata for {checkpoint_dir.name}: {e}")
+
+        return checkpoints
+
+    def cleanup(self, dry_run: bool = False) -> List[str]:
+        """
+        Apply retention policy to remove old checkpoints.
+
+        Args:
+            dry_run: If True, only show what would be deleted without deleting.
+
+        Returns:
+            List of deleted checkpoint names.
+        """
+        checkpoints = self.list_checkpoints()
+        to_keep = set(self.retention_policy.select_checkpoints_to_keep(checkpoints))
+        to_delete = [ckpt["name"] for ckpt in checkpoints if ckpt["name"] not in to_keep]
+
+        if dry_run:
+            logger.info(f"[DRY RUN] Would delete {len(to_delete)} checkpoints: {to_delete}")
+            return to_delete
+
+        deleted = []
+        for name in to_delete:
+            try:
+                checkpoint_dir = self.local_dir / name
+                shutil.rmtree(checkpoint_dir)
+                deleted.append(name)
+                logger.info(f"Deleted checkpoint: {name}")
+            except Exception as e:
+                logger.error(f"Failed to delete {name}: {e}")
+
+        return deleted

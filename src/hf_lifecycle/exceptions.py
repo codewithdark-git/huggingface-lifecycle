@@ -21,3 +21,15 @@ class InvalidTokenError(AuthenticationError):
 class RepositoryError(HfLifecycleError):
     """Base exception for repository operations."""
     pass
+
+class CheckpointError(HfLifecycleError):
+    """Base exception for checkpoint operations."""
+    pass
+
+class CheckpointNotFoundError(CheckpointError):
+    """Raised when a checkpoint is not found."""
+    pass
+
+class CheckpointCorruptedError(CheckpointError):
+    """Raised when a checkpoint is corrupted or invalid."""
+    pass

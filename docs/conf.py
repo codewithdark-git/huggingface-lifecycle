@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.abspath('../src'))
 
 # -- Project information -----------------------------------------------------
 project = 'HuggingFace Lifecycle Manager'
-copyright = '2023, Antigravity'
-author = 'Antigravity'
+copyright = '2025, codewithdark'
+author = 'codewithdark'
 release = '0.1.0'
 
 # -- General configuration ---------------------------------------------------

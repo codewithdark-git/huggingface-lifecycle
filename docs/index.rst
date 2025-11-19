@@ -74,6 +74,7 @@ Contents
    quickstart
    authentication
    repository
+   checkpoint
    
 .. toctree::
    :maxdepth: 2
@@ -81,6 +82,7 @@ Contents
 
    api/auth
    api/repo
+   api/checkpoint
    api/exceptions
 
 Indices and tables
