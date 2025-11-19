@@ -40,7 +40,7 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - Git
 - A HuggingFace account (for testing Hub features)
 
@@ -49,13 +49,13 @@ We are committed to providing a welcoming and inspiring community for all. Pleas
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/huggingface-lifecycle.git
+   git clone https://github.com/codewithdark-git/huggingface-lifecycle.git
    cd huggingface-lifecycle
    ```
 
 3. Add the upstream repository:
    ```bash
-   git remote add upstream https://github.com/ORIGINAL_OWNER/huggingface-lifecycle.git
+   git remote add upstream https://github.com/codewithdark-git/huggingface-lifecycle.git
    ```
 
 ## 💻 Development Setup
