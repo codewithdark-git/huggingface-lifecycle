@@ -1,4 +1,10 @@
 from setuptools import setup
 
 if __name__ == "__main__":
-    setup()
+    setup(
+        entry_points={
+            'console_scripts': [
+                'hf-lifecycle=hf_lifecycle.cli:main',
+            ],
+        },
+    )
