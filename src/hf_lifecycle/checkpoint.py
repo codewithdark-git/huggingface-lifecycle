@@ -309,3 +309,111 @@ class CheckpointManager:
                 logger.error(f"Failed to delete {name}: {e}")
 
         return deleted
+
+    def upload_to_hub(
+        self,
+        repo_id: str,
+        checkpoint_name: Optional[str] = None,
+        commit_message: Optional[str] = None,
+    ) -> None:
+        """
+        Upload checkpoint(s) to HuggingFace Hub.
+
+        Args:
+            repo_id: Repository ID on HuggingFace Hub.
+            checkpoint_name: Specific checkpoint to upload. If None, uploads all.
+            commit_message: Git commit message for the upload.
+
+        Raises:
+            CheckpointNotFoundError: If specified checkpoint doesn't exist.
+            CheckpointError: If upload fails.
+        """
+        try:
+            api = self.repo_manager._api
+            
+            if checkpoint_name:
+                # Upload specific checkpoint
+                checkpoint_dir = self.local_dir / checkpoint_name
+                if not checkpoint_dir.exists():
+                    raise CheckpointNotFoundError(
+                        f"Checkpoint not found: {checkpoint_name}"
+                    )
+                
+                # Upload all files in checkpoint directory
+                for file_path in checkpoint_dir.rglob("*"):
+                    if file_path.is_file():
+                        relative_path = file_path.relative_to(checkpoint_dir)
+                        path_in_repo = f"checkpoints/{checkpoint_name}/{relative_path}"
+                        
+                        api.upload_file(
+                            path_or_fileobj=str(file_path),
+                            path_in_repo=path_in_repo,
+                            repo_id=repo_id,
+                            commit_message=commit_message
+                            or f"Upload checkpoint {checkpoint_name}",
+                        )
+                
+                logger.info(f"Uploaded checkpoint {checkpoint_name} to {repo_id}")
+            else:
+                # Upload all checkpoints
+                checkpoints = self.list_checkpoints()
+                for ckpt in checkpoints:
+                    self.upload_to_hub(repo_id, ckpt["name"], commit_message)
+                
+                logger.info(f"Uploaded {len(checkpoints)} checkpoints to {repo_id}")
+                
+        except CheckpointNotFoundError:
+            raise
+        except Exception as e:
+            raise CheckpointError(f"Failed to upload checkpoint to Hub: {e}")
+
+    def download_from_hub(
+        self,
+        repo_id: str,
+        checkpoint_name: str,
+        revision: Optional[str] = None,
+    ) -> str:
+        """
+        Download a checkpoint from HuggingFace Hub.
+
+        Args:
+            repo_id: Repository ID on HuggingFace Hub.
+            checkpoint_name: Name of checkpoint to download.
+            revision: Git revision (branch, tag, commit) to download from.
+
+        Returns:
+            Path to downloaded checkpoint directory.
+
+        Raises:
+            CheckpointError: If download fails.
+        """
+        try:
+            from huggingface_hub import snapshot_download
+            
+            # Download specific checkpoint directory from hub
+            cache_dir = snapshot_download(
+                repo_id=repo_id,
+                allow_patterns=f"checkpoints/{checkpoint_name}/*",
+                revision=revision,
+            )
+            
+            # Copy to local checkpoint directory
+            checkpoint_dir = self.local_dir / checkpoint_name
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            
+            import shutil
+            src_dir = Path(cache_dir) / "checkpoints" / checkpoint_name
+            if src_dir.exists():
+                for item in src_dir.iterdir():
+                    if item.is_file():
+                        shutil.copy2(item, checkpoint_dir / item.name)
+                    elif item.is_dir():
+                        shutil.copytree(
+                            item, checkpoint_dir / item.name, dirs_exist_ok=True
+                        )
+            
+            logger.info(f"Downloaded checkpoint {checkpoint_name} from {repo_id}")
+            return str(checkpoint_dir)
+            
+        except Exception as e:
+            raise CheckpointError(f"Failed to download checkpoint from Hub: {e}")
