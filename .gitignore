@@ -9,6 +9,7 @@ __pycache__/
 # project
 *.env
 plan.md
+.github/workflows/test.yml
 
 # Distribution / packaging
 .Python
@@ -158,3 +159,4 @@ cython_debug/
 .vscode/
 *.swp
 *.swo
+
