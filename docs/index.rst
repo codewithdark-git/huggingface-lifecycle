@@ -75,6 +75,10 @@ Contents
    authentication
    repository
    checkpoint
+   model_registry
+   dataset
+   training_state
+   utilities
    
 .. toctree::
    :maxdepth: 2
@@ -83,6 +87,10 @@ Contents
    api/auth
    api/repo
    api/checkpoint
+   api/model_registry
+   api/dataset
+   api/training_state
+   api/utils
    api/exceptions
 
 Indices and tables
