@@ -35,7 +35,7 @@ class TestCheckpointHubSync:
         with pytest.raises(CheckpointNotFoundError):
             checkpoint_manager.upload_to_hub("user/repo", "nonexistent")
 
-    @patch("hf_lifecycle.checkpoint.snapshot_download")
+    @patch("huggingface_hub.snapshot_download")
     def test_download_from_hub(self, mock_snapshot, checkpoint_manager, tmp_path):
         # Setup mock
         fake_cache = tmp_path / "cache"

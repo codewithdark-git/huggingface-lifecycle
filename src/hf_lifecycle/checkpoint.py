@@ -10,6 +10,8 @@ from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 import logging
 
+from huggingface_hub import HfApi, snapshot_download, upload_folder, hf_hub_download
+
 from hf_lifecycle.repo import RepoManager
 from hf_lifecycle.retention import RetentionPolicy, KeepLastN
 from hf_lifecycle.exceptions import (

@@ -7,6 +7,8 @@ from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
 import json
 import logging
+import shutil
+import os
 
 from hf_lifecycle.repo import RepoManager
 from hf_lifecycle.exceptions import HfLifecycleError

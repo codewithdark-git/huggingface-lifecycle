@@ -29,6 +29,10 @@ class TestModelRegistry:
     def model_registry(self, mock_repo_manager):
         return ModelRegistry(mock_repo_manager)
 
+    @pytest.fixture
+    def mock_model(self):
+        return SimpleTestModel()
+
     def test_generate_model_card_basic(self, model_registry):
         card = model_registry.generate_model_card(
             model_name="test-model",
@@ -70,20 +74,18 @@ class TestModelRegistry:
         assert "transformer" in card
         assert "Architecture" in card
 
-    @patch("hf_lifecycle.model_registry.torch.save")
-    @patch("hf_lifecycle.model_registry.Path.mkdir")
+    @patch("shutil.rmtree")
     @patch("hf_lifecycle.model_registry.Path.rglob")
-    @patch("hf_lifecycle.model_registry.shutil.rmtree")
+    @patch("hf_lifecycle.model_registry.Path.mkdir")
+    @patch("hf_lifecycle.model_registry.torch.save")
     def test_register_model(
-        self, mock_rmtree, mock_rglob, mock_mkdir, mock_save, model_registry, mock_repo_manager
+        self, mock_save, mock_mkdir, mock_rglob, mock_rmtree, model_registry, mock_repo_manager, mock_model
     ):
-        model = SimpleTestModel()
-        
         # Mock file iteration
         mock_rglob.return_value = []
         
         repo_url = model_registry.register_model(
-            model=model,
+            model=mock_model,
             repo_id="user/test-model",
             description="Test model",
         )
@@ -92,26 +94,25 @@ class TestModelRegistry:
         mock_repo_manager.create_repo.assert_called_once()
         mock_repo_manager.update_card.assert_called_once()
 
-    def test_register_model_with_metrics(self, model_registry, mock_repo_manager):
-        model = SimpleTestModel()
+    @patch("shutil.rmtree")
+    @patch("hf_lifecycle.model_registry.Path.rglob")
+    @patch("hf_lifecycle.model_registry.Path.mkdir")
+    @patch("hf_lifecycle.model_registry.torch.save")
+    def test_register_model_with_metrics(self, mock_save, mock_mkdir, mock_rglob, mock_rmtree, model_registry, mock_repo_manager, mock_model):
+        mock_rglob.return_value = []
 
-        with patch("hf_lifecycle.model_registry.torch.save"), \
-             patch("hf_lifecycle.model_registry.Path.mkdir"), \
-             patch("hf_lifecycle.model_registry.Path.rglob", return_value=[]), \
-             patch("hf_lifecycle.model_registry.shutil.rmtree"):
+        model_registry.register_model(
+            model=mock_model,
+            repo_id="user/test-model",
+            metrics={"accuracy": 0.95},
+        )
 
-            model_registry.register_model(
-                model=model,
-                repo_id="user/test-model",
-                metrics={"accuracy": 0.95},
-            )
+        # Verify model card was generated with metrics
+        call_args = mock_repo_manager.update_card.call_args
+        model_card = call_args[0][1]
+        assert "accuracy" in model_card
 
-            # Verify model card was generated with metrics
-            call_args = mock_repo_manager.update_card.call_args
-            model_card = call_args[0][1]
-            assert "accuracy" in model_card
-
-    @patch("hf_lifecycle.model_registry.AutoModel")
+    @patch("transformers.AutoModel")
     def test_load_model(self, mock_automodel, model_registry):
         mock_model = MagicMock()
         mock_automodel.from_pretrained.return_value = mock_model

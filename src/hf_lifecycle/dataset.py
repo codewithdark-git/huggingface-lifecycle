@@ -10,6 +10,8 @@ import logging
 import tempfile
 import shutil
 
+from huggingface_hub import HfApi, snapshot_download, upload_folder
+
 from hf_lifecycle.repo import RepoManager
 from hf_lifecycle.exceptions import DatasetError
 
@@ -146,7 +148,7 @@ class DatasetManager:
         """
         try:
             with tempfile.TemporaryDirectory() as tmp_dir:
-                file_path = Path(tmp_dir) / Path(path_in_repo).name
+                file_path = os.path.join(tmp_dir, f"data.{format}")
                 
                 if format == "parquet":
                     df.to_parquet(file_path, **kwargs)

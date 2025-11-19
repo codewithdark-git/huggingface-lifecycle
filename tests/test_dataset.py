@@ -5,6 +5,12 @@ from hf_lifecycle.dataset import DatasetManager
 from hf_lifecycle.repo import RepoManager
 from hf_lifecycle.exceptions import DatasetError
 
+try:
+    import pyarrow
+    HAS_PYARROW = True
+except ImportError:
+    HAS_PYARROW = False
+
 
 class TestDatasetManager:
     @pytest.fixture
@@ -36,11 +42,11 @@ class TestDatasetManager:
         dataset_manager.upload_folder("user/dataset", "local_folder")
         mock_repo_manager._api.upload_folder.assert_called_once()
 
-    def test_upload_dataframe_parquet(self, dataset_manager, mock_repo_manager):
+    def test_upload_dataframe_parquet(self, dataset_manager, mock_repo_manager, tmp_path):
         df = pd.DataFrame({"col1": [1, 2], "col2": ["a", "b"]})
         
         with patch("hf_lifecycle.dataset.tempfile.TemporaryDirectory") as mock_temp:
-            mock_temp.return_value.__enter__.return_value = "/tmp"
+            mock_temp.return_value.__enter__.return_value = str(tmp_path)
             
             dataset_manager.upload_dataframe(
                 "user/dataset", df, "data.parquet", format="parquet"
@@ -51,11 +57,11 @@ class TestDatasetManager:
             args = mock_repo_manager._api.upload_file.call_args
             assert "data.parquet" in args.kwargs["path_in_repo"]
 
-    def test_upload_dataframe_csv(self, dataset_manager, mock_repo_manager):
+    def test_upload_dataframe_csv(self, dataset_manager, mock_repo_manager, tmp_path):
         df = pd.DataFrame({"col1": [1, 2]})
         
         with patch("hf_lifecycle.dataset.tempfile.TemporaryDirectory") as mock_temp:
-            mock_temp.return_value.__enter__.return_value = "/tmp"
+            mock_temp.return_value.__enter__.return_value = str(tmp_path)
             
             dataset_manager.upload_dataframe(
                 "user/dataset", df, "data.csv", format="csv"
@@ -70,7 +76,7 @@ class TestDatasetManager:
                 "user/dataset", df, "data.xyz", format="xyz"
             )
 
-    @patch("hf_lifecycle.dataset.snapshot_download")
+    @patch("huggingface_hub.snapshot_download")
     def test_download_dataset(self, mock_download, dataset_manager):
         mock_download.return_value = "/cache/dataset"
         
