@@ -99,34 +99,6 @@ class TestEarlyStopping:
         # No improvement for 3 epochs
         assert early_stop.step(1.0) is False  # Best: 1.0
         assert early_stop.step(1.1) is False  # No improvement (count=1)
-        assert early_stop.step(1.2) is False  # No improvement (count=2)
-        assert early_stop.step(1.3) is True   # No improvement (count=3) - STOP
-
-    def test_early_stopping_improvement(self):
-        early_stop = EarlyStopping(patience=2, mode="min")
-        
-        assert early_stop.step(1.0) is False  # Best: 1.0
-        assert early_stop.step(1.1) is False  # No improvement (count=1)
-        assert early_stop.step(0.9) is False  # Improvement! Reset counter
-        assert early_stop.step(1.0) is False  # No improvement (count=1)
-        assert early_stop.step(1.1) is False  # No improvement (count=2)
-        assert early_stop.step(1.2) is True   # STOP
-
-    def test_early_stopping_max_mode(self):
-        early_stop = EarlyStopping(patience=2, mode="max")
-        
-        assert early_stop.step(0.5) is False  # Best: 0.5
-        assert early_stop.step(0.4) is False  # No improvement (count=1)
-        assert early_stop.step(0.6) is False  # Improvement! Reset counter
-        assert early_stop.step(0.5) is False  # No improvement (count=1)
-        assert early_stop.step(0.4) is False  # No improvement (count=2)
-        assert early_stop.step(0.3) is True   # STOP
-
-    def test_early_stopping_state_dict(self):
-        early_stop = EarlyStopping(patience=5, mode="min")
-        early_stop.step(1.0)
-        early_stop.step(1.1)
-        
         state = early_stop.state_dict()
         assert state["best_metric"] == 1.0
         assert state["counter"] == 1

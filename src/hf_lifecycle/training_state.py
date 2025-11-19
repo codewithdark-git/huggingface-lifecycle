@@ -73,7 +73,21 @@ class TrainingStateManager:
         Returns:
             Dictionary containing training state.
         """
-        state = torch.load(path)
+        # Load with weights_only=False for compatibility with saved RNG states
+        # PyTorch 2.6+ requires explicit allowlist for numpy types
+        try:
+            import torch.serialization
+            # Add numpy types to safe globals for PyTorch 2.6+
+            with torch.serialization.safe_globals([
+                np.core.multiarray._reconstruct,
+                np.ndarray,
+                np.dtype,
+                np.core.multiarray.scalar,
+            ]):
+                state = torch.load(path, weights_only=False)
+        except (AttributeError, TypeError):
+            # Fallback for older PyTorch versions
+            state = torch.load(path, weights_only=False)
 
         if restore_rng:
             # Restore RNG states
