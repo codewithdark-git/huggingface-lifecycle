@@ -33,3 +33,7 @@ class CheckpointNotFoundError(CheckpointError):
 class CheckpointCorruptedError(CheckpointError):
     """Raised when a checkpoint is corrupted or invalid."""
     pass
+
+class ModelRegistryError(HfLifecycleError):
+    """Base exception for model registry operations."""
+    pass
