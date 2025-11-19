@@ -22,7 +22,7 @@ A production-ready Python package for comprehensive lifecycle management of Hugg
 
 ```bash
 # From source
-git clone https://github.com/yourusername/huggingface-lifecycle.git
+git clone https://github.com/codewithdark-git/huggingface-lifecycle.git
 cd huggingface-lifecycle
 pip install -e .
 
@@ -190,7 +190,7 @@ MIT License - see [LICENSE](LICENSE) file.
 
 ## 📮 Support
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/huggingface-lifecycle/issues)
+- **Issues:** [GitHub Issues](https://github.com/codewithdark-git/huggingface-lifecycle/issues)
 - **Docs:** [ReadTheDocs](https://huggingface-lifecycle.readthedocs.io)
 
 ---
