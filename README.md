@@ -51,6 +51,27 @@ except Exception as e:
 token = auth.get_token()
 ```
 
+### Repository Management
+
+The `RepoManager` simplifies creating, deleting, and managing repositories.
+
+```python
+from hf_lifecycle.repo import RepoManager
+
+repo_mgr = RepoManager(auth)
+
+# Create a new private model repository
+url = repo_mgr.create_repo("username/my-new-model", private=True)
+print(f"Created repo: {url}")
+
+# Update the Model Card (README.md)
+repo_mgr.update_card("username/my-new-model", "# My New Model\n\nDescription here.")
+
+# List your repositories
+repos = repo_mgr.list_repos()
+print(f"My repos: {repos}")
+```
+
 ```python
 import hf_lifecycle
 

@@ -17,3 +17,7 @@ class TokenNotFoundError(AuthenticationError):
 class InvalidTokenError(AuthenticationError):
     """Raised when the authentication token is invalid."""
     pass
+
+class RepositoryError(HfLifecycleError):
+    """Base exception for repository operations."""
+    pass
