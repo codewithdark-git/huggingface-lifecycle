@@ -37,3 +37,7 @@ class CheckpointCorruptedError(CheckpointError):
 class ModelRegistryError(HfLifecycleError):
     """Base exception for model registry operations."""
     pass
+
+class DatasetError(HfLifecycleError):
+    """Base exception for dataset operations."""
+    pass
