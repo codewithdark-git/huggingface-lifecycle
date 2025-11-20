@@ -1,7 +1,7 @@
 Quick Start Guide
 =================
 
-This guide will help you get started with HuggingFace Lifecycle Manager.
+This guide will help you get started with HuggingFace Lifecycle Manager using the high-level ``HFManager`` API.
 
 Installation
 ------------
@@ -15,17 +15,22 @@ Install the package using pip:
 Basic Usage
 -----------
 
-1. Authentication
-~~~~~~~~~~~~~~~~~
+1. Initialize HFManager
+~~~~~~~~~~~~~~~~~~~~~~~
 
-First, authenticate with the HuggingFace Hub:
+The ``HFManager`` class provides a unified interface for all lifecycle operations:
 
 .. code-block:: python
 
-   from hf_lifecycle.auth import AuthManager
+   from hf_lifecycle import HFManager
 
-   auth = AuthManager()
-   auth.login(token="hf_your_token_here", write_to_disk=True)
+   manager = HFManager(
+       repo_id="username/my-model",
+       local_dir="./outputs",
+       checkpoint_dir="./checkpoints",
+       hf_token="your_token",
+       auto_push=False  # Set to True to auto-push checkpoints
+   )
 
 You can also set the ``HF_TOKEN`` environment variable:
 
@@ -33,45 +38,70 @@ You can also set the ``HF_TOKEN`` environment variable:
 
    export HF_TOKEN=hf_your_token_here
 
-2. Repository Management
+2. Track Hyperparameters
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Create and manage repositories:
+.. code-block:: python
+
+   manager.track_hyperparameters({
+       "learning_rate": 0.001,
+       "batch_size": 32,
+       "epochs": 10
+   })
+
+3. Training Loop
+~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from hf_lifecycle.repo import RepoManager
+   for epoch in range(epochs):
+       # Train and validate
+       train_loss, train_acc = train_epoch(...)
+       val_loss, val_acc = evaluate(...)
+       
+       # Log metrics
+       manager.log_metrics({
+           "train_loss": train_loss,
+           "train_accuracy": train_acc,
+           "val_loss": val_loss,
+           "val_accuracy": val_acc
+       }, step=epoch)
+       
+       # Save checkpoint
+       manager.save_checkpoint(
+           model=model,
+           optimizer=optimizer,
+           epoch=epoch,
+           metrics={"val_loss": val_loss},
+           config=config
+       )
 
-   repo_mgr = RepoManager(auth)
-
-   # Create a new repository
-   url = repo_mgr.create_repo("username/my-model", private=True)
-   print(f"Created: {url}")
-
-   # List your repositories
-   repos = repo_mgr.list_repos()
-   print(f"My repositories: {repos}")
-
-3. Update Model Cards
-~~~~~~~~~~~~~~~~~~~~~
+4. Save Final Model
+~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   model_card = """
-   # My Awesome Model
+   manager.save_final_model(
+       model=model,
+       format="safetensors",  # or "pt"
+       config=config
+   )
 
-   This model does amazing things!
+5. Push to Hub
+~~~~~~~~~~~~~~
 
-   ## Training Details
-   - Dataset: custom-dataset
-   - Epochs: 10
-   """
+Push all artifacts to HuggingFace Hub at once:
 
-   repo_mgr.update_card("username/my-model", model_card)
+.. code-block:: python
+
+   manager.push(
+       push_checkpoints=True,
+       push_metadata=True,
+       push_final_model=True
+   )
 
 Next Steps
 ----------
 
-- Learn more about :doc:`authentication`
-- Explore :doc:`repository` management
-- Check out the :doc:`api/auth` for detailed API documentation
+- Check out the :doc:`api/manager` reference for complete API documentation
+- See :doc:`examples <../examples/simple_training_example>` for complete working examples

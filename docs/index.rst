@@ -84,6 +84,7 @@ Contents
    :maxdepth: 2
    :caption: API Reference
 
+   api/manager
    api/auth
    api/repo
    api/checkpoint
