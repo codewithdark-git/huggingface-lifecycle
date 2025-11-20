@@ -5,6 +5,8 @@
 [![Documentation](https://img.shields.io/badge/docs-readthedocs-blue.svg)](https://huggingface-lifecycle.readthedocs.io)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+> **Streamline your HuggingFace training workflows with automated lifecycle management and complete reproducibility.**
+
 A production-ready Python package for comprehensive lifecycle management of HuggingFace training workflows. Streamline your ML experiments with automated checkpoint management, model registration, and complete reproducibility tracking.
 
 📖 **[Read the Full Documentation →](https://huggingface-lifecycle.readthedocs.io)**
