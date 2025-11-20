@@ -1,0 +1,11 @@
+{
+  "epoch": 2,
+  "step": 2,
+  "metrics": {
+    "train_loss": 1.2271772474050522,
+    "train_accuracy": 0.948,
+    "val_loss": 2.468589816774641,
+    "val_accuracy": 0.095
+  },
+  "timestamp": "2025-11-20T16:24:18.810272"
+}

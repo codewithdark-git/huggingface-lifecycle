@@ -135,6 +135,82 @@ class ModelRegistry:
 
         return card
 
+    def register_custom_model(
+        self,
+        model: torch.nn.Module,
+        config: Any,
+        repo_id: str,
+        model_type: str,
+        push_to_hub: bool = True,
+        private: bool = False,
+        commit_message: str = "Upload custom model",
+    ) -> str:
+        """
+        Register a custom model architecture for AutoClass compatibility.
+        
+        This method follows the Hugging Face custom model registration flow:
+        1. Registers the config and model classes with AutoConfig and AutoModel.
+        2. Calls register_for_auto_class() on config and model.
+        3. Pushes to Hub if requested.
+
+        Args:
+            model: The custom model instance (should inherit from PreTrainedModel).
+            config: The custom config instance (should inherit from PretrainedConfig).
+            repo_id: Repository ID (username/model-name).
+            model_type: Unique string identifier for the model type.
+            push_to_hub: Whether to push the model to the Hub immediately.
+            private: Whether the repo should be private (if creating new).
+            commit_message: Commit message for the push.
+
+        Returns:
+            URL of the repository.
+        """
+        try:
+            from transformers import AutoConfig, AutoModel, PretrainedConfig, PreTrainedModel
+
+            if not isinstance(config, PretrainedConfig):
+                raise ModelRegistryError("Config must inherit from PretrainedConfig")
+            
+            if not isinstance(model, PreTrainedModel):
+                raise ModelRegistryError("Model must inherit from PreTrainedModel")
+
+            # 1. Register classes
+            AutoConfig.register(model_type, config.__class__)
+            AutoModel.register(config.__class__, model.__class__)
+            
+            logger.info(f"Registered custom model type '{model_type}' with AutoConfig and AutoModel")
+
+            # 2. Register for auto class
+            # Note: register_for_auto_class is a method on the class, not instance, 
+            # but usually called on the class. However, transformers docs say:
+            # "Use register_for_auto_class() on the config and model objects"
+            # Actually it's usually: CustomConfig.register_for_auto_class()
+            
+            if hasattr(config.__class__, "register_for_auto_class"):
+                config.__class__.register_for_auto_class(model_type)
+            if hasattr(model.__class__, "register_for_auto_class"):
+                model.__class__.register_for_auto_class(model_type)
+                
+            logger.info("Called register_for_auto_class on config and model classes")
+
+            if push_to_hub:
+                # Create repo if needed
+                self.repo_manager.create_repo(
+                    repo_id=repo_id, repo_type="model", private=private, exist_ok=True
+                )
+                
+                # Push to hub
+                model.push_to_hub(repo_id, commit_message=commit_message, private=private)
+                config.push_to_hub(repo_id, commit_message=commit_message, private=private)
+                
+                logger.info(f"Pushed custom model to {repo_id}")
+                return f"https://huggingface.co/{repo_id}"
+            
+            return "Local registration complete"
+
+        except Exception as e:
+            raise ModelRegistryError(f"Failed to register custom model: {e}")
+
     def register_model(
         self,
         model: torch.nn.Module,
@@ -150,7 +226,9 @@ class ModelRegistry:
         commit_message: str = "Upload model",
     ) -> str:
         """
-        Register a custom model to HuggingFace Hub.
+        Register a standard model to HuggingFace Hub.
+        
+        For custom architectures, use register_custom_model instead.
 
         Args:
             model: PyTorch model to register.

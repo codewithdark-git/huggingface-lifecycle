@@ -115,6 +115,7 @@ from hf_lifecycle.model_registry import ModelRegistry
 
 registry = ModelRegistry(repo_mgr)
 
+# Register standard model
 registry.register_model(
     model=model,
     repo_id="username/my-awesome-model",
@@ -122,6 +123,16 @@ registry.register_model(
     metrics={"accuracy": 0.95, "f1": 0.94},
     datasets=["imdb", "sst2"],
     tags=["sentiment-analysis", "pytorch"]
+)
+
+# Register custom model architecture
+# Ensure your model inherits from PreTrainedModel and config from PretrainedConfig
+registry.register_custom_model(
+    model=custom_model,
+    config=custom_config,
+    repo_id="username/my-custom-model",
+    model_type="my-custom-model-type",
+    push_to_hub=True
 )
 ```
 

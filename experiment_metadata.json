@@ -1,0 +1,106 @@
+{
+  "created_at": "2025-11-20T16:24:17.773008",
+  "system": {
+    "platform": "Windows-11-10.0.22621-SP0",
+    "python_version": "3.13.9 (tags/v3.13.9:8183fa5, Oct 14 2025, 14:09:13) [MSC v.1944 64 bit (AMD64)]",
+    "python_executable": "D:\\CodeBackground\\huggingface-lifecycle\\venv\\Scripts\\python.exe",
+    "os": "Windows",
+    "os_version": "10.0.22621",
+    "architecture": "AMD64",
+    "processor": "Intel64 Family 6 Model 142 Stepping 9, GenuineIntel",
+    "hostname": "DESKTOP-NOKQ4CP",
+    "cpu_count": 4,
+    "cuda_available": false
+  },
+  "environment": {
+    "packages": {
+      "torch": "2.9.1",
+      "transformers": "4.57.1",
+      "huggingface-hub": "0.36.0",
+      "numpy": "2.3.5",
+      "pandas": "2.3.3"
+    },
+    "git": {
+      "commit": "1fe352fa7a6e5de0bac4c0dddd316cebdc2bf795",
+      "branch": "main",
+      "dirty": true
+    }
+  },
+  "hyperparameters": {
+    "learning_rate": 0.001,
+    "batch_size": 32,
+    "epochs": 20,
+    "hidden_size": 128,
+    "early_stopping_patience": 5
+  },
+  "metrics": {
+    "history": [
+      {
+        "step": 0,
+        "metrics": {
+          "train_loss": 2.332124024629593,
+          "train_accuracy": 0.097,
+          "val_loss": 2.348015138081142,
+          "val_accuracy": 0.085
+        },
+        "timestamp": "2025-11-20T16:24:18.528375"
+      },
+      {
+        "step": 1,
+        "metrics": {
+          "train_loss": 1.7466501258313656,
+          "train_accuracy": 0.767,
+          "val_loss": 2.362065996442522,
+          "val_accuracy": 0.095
+        },
+        "timestamp": "2025-11-20T16:24:18.674191"
+      },
+      {
+        "step": 2,
+        "metrics": {
+          "train_loss": 1.2271772474050522,
+          "train_accuracy": 0.948,
+          "val_loss": 2.468589816774641,
+          "val_accuracy": 0.095
+        },
+        "timestamp": "2025-11-20T16:24:18.809918"
+      },
+      {
+        "step": 3,
+        "metrics": {
+          "train_loss": 0.7142637912184,
+          "train_accuracy": 0.991,
+          "val_loss": 2.594510453087943,
+          "val_accuracy": 0.095
+        },
+        "timestamp": "2025-11-20T16:24:18.989972"
+      },
+      {
+        "step": 4,
+        "metrics": {
+          "train_loss": 0.3446523705497384,
+          "train_accuracy": 0.999,
+          "val_loss": 2.8348162855420793,
+          "val_accuracy": 0.08
+        },
+        "timestamp": "2025-11-20T16:24:19.233417"
+      },
+      {
+        "step": 5,
+        "metrics": {
+          "train_loss": 0.18462318554520607,
+          "train_accuracy": 1.0,
+          "val_loss": 2.8365439687456404,
+          "val_accuracy": 0.075
+        },
+        "timestamp": "2025-11-20T16:24:19.623912"
+      }
+    ],
+    "final": {
+      "final_val_loss": 2.8365439687456404,
+      "final_val_accuracy": 0.075,
+      "best_val_loss": 2.348015138081142
+    }
+  },
+  "custom": {}
+}

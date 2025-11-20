@@ -23,13 +23,27 @@ from hf_lifecycle.metadata import MetadataTracker
 from hf_lifecycle.model_registry import ModelRegistry
 
 
-# Simple model for demonstration
-class SimpleClassifier(nn.Module):
-    def __init__(self, input_size=784, hidden_size=128, num_classes=10):
-        super().__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)
+from transformers import PreTrainedModel, PretrainedConfig, AutoConfig, AutoModel
+
+# Custom Config
+class SimpleConfig(PretrainedConfig):
+    model_type = "simple-classifier"
+    
+    def __init__(self, input_size=784, hidden_size=128, num_classes=10, **kwargs):
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        super().__init__(**kwargs)
+
+# Custom Model
+class SimpleClassifier(PreTrainedModel):
+    config_class = SimpleConfig
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.fc1 = nn.Linear(config.input_size, config.hidden_size)
         self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(hidden_size, num_classes)
+        self.fc2 = nn.Linear(config.hidden_size, config.num_classes)
     
     def forward(self, x):
         x = self.fc1(x)
@@ -168,11 +182,12 @@ def main():
     # MODEL AND DATA
     # ========================================================================
     print("\n🤖 Step 5: Model and Data Preparation")
-    model = SimpleClassifier(
+    config = SimpleConfig(
         input_size=784,
         hidden_size=hyperparameters["hidden_size"],
         num_classes=10
-    ).to(device)
+    )
+    model = SimpleClassifier(config).to(device)
     
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=hyperparameters["learning_rate"])
@@ -276,11 +291,13 @@ def main():
     print("\n📦 Step 7: Model Registration (Optional)")
     print("To register your model to HuggingFace Hub:")
     print("  registry = ModelRegistry(repo_mgr)")
-    print("  registry.register_model(")
+    print("  # Register custom model")
+    print("  registry.register_custom_model(")
     print("      model=model,")
-    print("      repo_id='username/my-model',")
-    print("      description='Simple classifier trained with hf-lifecycle',")
-    print("      metrics=metadata_tracker.metadata['metrics']['final']")
+    print("      config=config,")
+    print("      repo_id='username/my-custom-model',")
+    print("      model_type='simple-classifier',")
+    print("      push_to_hub=True")
     print("  )")
     
     print("\n" + "=" * 70)

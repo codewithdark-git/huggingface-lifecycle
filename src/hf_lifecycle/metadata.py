@@ -78,7 +78,7 @@ class MetadataTracker:
             Dictionary containing environment information.
         """
         import torch
-        import pkg_resources
+        import importlib.metadata
 
         env_info = {
             "packages": {},
@@ -96,9 +96,9 @@ class MetadataTracker:
 
         for package in key_packages:
             try:
-                version = pkg_resources.get_distribution(package).version
+                version = importlib.metadata.version(package)
                 env_info["packages"][package] = version
-            except Exception:
+            except importlib.metadata.PackageNotFoundError:
                 env_info["packages"][package] = "not installed"
 
         # Git information
@@ -120,6 +120,9 @@ class MetadataTracker:
             ).decode().strip()
             env_info["git"]["dirty"] = len(git_status) > 0
 
+        except subprocess.CalledProcessError:
+            # Not a git repository or git command failed
+            env_info["git"]["error"] = "Not a git repository or git not installed"
         except Exception as e:
             env_info["git"]["error"] = str(e)
             logger.warning(f"Could not capture git information: {e}")

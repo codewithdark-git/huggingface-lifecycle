@@ -89,9 +89,6 @@ class CheckpointManager:
                     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
                     name = f"checkpoint-{timestamp}"
 
-            checkpoint_dir = self.local_dir / name
-            checkpoint_dir.mkdir(parents=True, exist_ok=True)
-
             # Build checkpoint dictionary
             checkpoint = {
                 "model_state_dict": model.state_dict(),
@@ -108,8 +105,8 @@ class CheckpointManager:
             if scheduler is not None:
                 checkpoint["scheduler_state_dict"] = scheduler.state_dict()
 
-            # Save checkpoint
-            checkpoint_path = checkpoint_dir / "checkpoint.pt"
+            # Save checkpoint directly
+            checkpoint_path = self.local_dir / f"{name}.pt"
             torch.save(checkpoint, checkpoint_path)
 
             # Save metadata separately for easy inspection
@@ -119,12 +116,12 @@ class CheckpointManager:
                 "metrics": metrics or {},
                 "timestamp": checkpoint["timestamp"],
             }
-            metadata_path = checkpoint_dir / "metadata.json"
+            metadata_path = self.local_dir / f"{name}.json"
             with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
 
             logger.info(f"Saved checkpoint: {name}")
-            return str(checkpoint_dir)
+            return str(checkpoint_path)
 
         except Exception as e:
             raise CheckpointError(f"Failed to save checkpoint: {e}")
@@ -154,11 +151,15 @@ class CheckpointManager:
             CheckpointNotFoundError: If checkpoint doesn't exist.
             CheckpointCorruptedError: If checkpoint is corrupted.
         """
-        checkpoint_dir = self.local_dir / name
-        checkpoint_path = checkpoint_dir / "checkpoint.pt"
+        checkpoint_path = self.local_dir / f"{name}.pt"
 
         if not checkpoint_path.exists():
-            raise CheckpointNotFoundError(f"Checkpoint not found: {name}")
+            # Fallback for old directory structure
+            old_path = self.local_dir / name / "checkpoint.pt"
+            if old_path.exists():
+                checkpoint_path = old_path
+            else:
+                raise CheckpointNotFoundError(f"Checkpoint not found: {name}")
 
         try:
             checkpoint = torch.load(checkpoint_path, map_location=map_location)
@@ -263,22 +264,29 @@ class CheckpointManager:
         """
         checkpoints = []
 
+        checkpoints = []
+
         if not self.local_dir.exists():
             return checkpoints
 
-        for checkpoint_dir in self.local_dir.iterdir():
-            if not checkpoint_dir.is_dir():
+        for metadata_path in self.local_dir.glob("*.json"):
+            if not metadata_path.is_file():
+                continue
+            
+            # Skip if it's not a checkpoint metadata file (heuristic: must have corresponding .pt)
+            name = metadata_path.stem
+            checkpoint_path = self.local_dir / f"{name}.pt"
+            
+            if not checkpoint_path.exists():
                 continue
 
-            metadata_path = checkpoint_dir / "metadata.json"
-            if metadata_path.exists():
-                try:
-                    with open(metadata_path, "r") as f:
-                        metadata = json.load(f)
-                    metadata["name"] = checkpoint_dir.name
-                    checkpoints.append(metadata)
-                except Exception as e:
-                    logger.warning(f"Failed to read metadata for {checkpoint_dir.name}: {e}")
+            try:
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                metadata["name"] = name
+                checkpoints.append(metadata)
+            except Exception as e:
+                logger.warning(f"Failed to read metadata for {name}: {e}")
 
         return checkpoints
 
@@ -301,10 +309,23 @@ class CheckpointManager:
             return to_delete
 
         deleted = []
+        deleted = []
         for name in to_delete:
             try:
-                checkpoint_dir = self.local_dir / name
-                shutil.rmtree(checkpoint_dir)
+                # Try deleting flat files
+                pt_path = self.local_dir / f"{name}.pt"
+                json_path = self.local_dir / f"{name}.json"
+                
+                if pt_path.exists():
+                    pt_path.unlink()
+                if json_path.exists():
+                    json_path.unlink()
+                    
+                # Try deleting directory (old structure)
+                dir_path = self.local_dir / name
+                if dir_path.exists() and dir_path.is_dir():
+                    shutil.rmtree(dir_path)
+                
                 deleted.append(name)
                 logger.info(f"Deleted checkpoint: {name}")
             except Exception as e:
@@ -335,25 +356,48 @@ class CheckpointManager:
             
             if checkpoint_name:
                 # Upload specific checkpoint
-                checkpoint_dir = self.local_dir / checkpoint_name
-                if not checkpoint_dir.exists():
+                pt_path = self.local_dir / f"{checkpoint_name}.pt"
+                json_path = self.local_dir / f"{checkpoint_name}.json"
+                
+                if not pt_path.exists():
+                    # Check for old directory structure
+                    dir_path = self.local_dir / checkpoint_name
+                    if dir_path.exists() and dir_path.is_dir():
+                         # Upload all files in checkpoint directory
+                        for file_path in dir_path.rglob("*"):
+                            if file_path.is_file():
+                                relative_path = file_path.relative_to(dir_path)
+                                path_in_repo = f"checkpoints/{checkpoint_name}/{relative_path}"
+                                
+                                api.upload_file(
+                                    path_or_fileobj=str(file_path),
+                                    path_in_repo=path_in_repo,
+                                    repo_id=repo_id,
+                                    commit_message=commit_message
+                                    or f"Upload checkpoint {checkpoint_name}",
+                                )
+                        logger.info(f"Uploaded checkpoint {checkpoint_name} to {repo_id}")
+                        return
+
                     raise CheckpointNotFoundError(
                         f"Checkpoint not found: {checkpoint_name}"
                     )
                 
-                # Upload all files in checkpoint directory
-                for file_path in checkpoint_dir.rglob("*"):
-                    if file_path.is_file():
-                        relative_path = file_path.relative_to(checkpoint_dir)
-                        path_in_repo = f"checkpoints/{checkpoint_name}/{relative_path}"
-                        
-                        api.upload_file(
-                            path_or_fileobj=str(file_path),
-                            path_in_repo=path_in_repo,
-                            repo_id=repo_id,
-                            commit_message=commit_message
-                            or f"Upload checkpoint {checkpoint_name}",
-                        )
+                # Upload flat files
+                api.upload_file(
+                    path_or_fileobj=str(pt_path),
+                    path_in_repo=f"checkpoints/{checkpoint_name}.pt",
+                    repo_id=repo_id,
+                    commit_message=commit_message or f"Upload checkpoint {checkpoint_name}",
+                )
+                
+                if json_path.exists():
+                    api.upload_file(
+                        path_or_fileobj=str(json_path),
+                        path_in_repo=f"checkpoints/{checkpoint_name}.json",
+                        repo_id=repo_id,
+                        commit_message=commit_message or f"Upload checkpoint {checkpoint_name}",
+                    )
                 
                 logger.info(f"Uploaded checkpoint {checkpoint_name} to {repo_id}")
             else:
@@ -390,8 +434,37 @@ class CheckpointManager:
             CheckpointError: If download fails.
         """
         try:
-            from huggingface_hub import snapshot_download
+            from huggingface_hub import hf_hub_download
             
+            # Try downloading flat files
+            try:
+                pt_path = hf_hub_download(
+                    repo_id=repo_id,
+                    filename=f"checkpoints/{checkpoint_name}.pt",
+                    revision=revision,
+                    local_dir=self.local_dir,
+                    local_dir_use_symlinks=False
+                )
+                
+                # Try downloading metadata if it exists
+                try:
+                    hf_hub_download(
+                        repo_id=repo_id,
+                        filename=f"checkpoints/{checkpoint_name}.json",
+                        revision=revision,
+                        local_dir=self.local_dir,
+                        local_dir_use_symlinks=False
+                    )
+                except Exception:
+                    pass # Metadata might not exist
+                    
+                logger.info(f"Downloaded checkpoint {checkpoint_name} from {repo_id}")
+                return str(Path(pt_path).parent)
+                
+            except Exception:
+                # Fallback to directory structure download
+                pass
+
             # Download specific checkpoint directory from hub
             cache_dir = snapshot_download(
                 repo_id=repo_id,
