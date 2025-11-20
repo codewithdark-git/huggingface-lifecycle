@@ -11,6 +11,11 @@ from datetime import datetime
 import logging
 
 from huggingface_hub import HfApi, snapshot_download, upload_folder, hf_hub_download
+try:
+    from safetensors.torch import save_file as save_safetensors
+    SAFETENSORS_AVAILABLE = True
+except ImportError:
+    SAFETENSORS_AVAILABLE = False
 
 from hf_lifecycle.repo import RepoManager
 from hf_lifecycle.retention import RetentionPolicy, KeepLastN
@@ -57,6 +62,7 @@ class CheckpointManager:
         step: Optional[int] = None,
         metrics: Optional[Dict[str, float]] = None,
         custom_state: Optional[Dict[str, Any]] = None,
+        config: Optional[Any] = None,
         name: Optional[str] = None,
     ) -> str:
         """
@@ -69,7 +75,9 @@ class CheckpointManager:
             epoch: Current epoch number.
             step: Current step number.
             metrics: Dictionary of metrics (e.g., {'loss': 0.5, 'accuracy': 0.9}).
+            metrics: Dictionary of metrics (e.g., {'loss': 0.5, 'accuracy': 0.9}).
             custom_state: Any custom state dictionary to save.
+            config: Model configuration object (optional).
             name: Custom checkpoint name. If None, auto-generates based on step/epoch.
 
         Returns:
@@ -116,6 +124,17 @@ class CheckpointManager:
                 "metrics": metrics or {},
                 "timestamp": checkpoint["timestamp"],
             }
+
+            # Add config if available
+            model_config = config
+            if model_config is None and hasattr(model, "config"):
+                model_config = model.config
+            
+            if model_config is not None:
+                if hasattr(model_config, "to_dict"):
+                    metadata.update(model_config.to_dict())
+                elif isinstance(model_config, dict):
+                    metadata.update(model_config)
             metadata_path = self.local_dir / f"{name}.json"
             with open(metadata_path, "w") as f:
                 json.dump(metadata, f, indent=2)
@@ -125,6 +144,63 @@ class CheckpointManager:
 
         except Exception as e:
             raise CheckpointError(f"Failed to save checkpoint: {e}")
+
+    def save_final_model(
+        self,
+        model: torch.nn.Module,
+        name: str = "final_model",
+        format: str = "pt",
+        config: Optional[Any] = None,
+    ) -> str:
+        """
+        Save the final model to the root directory (parent of checkpoints dir).
+
+        Args:
+            model: PyTorch model to save.
+            name: Name of the file (without extension).
+            format: Format to save in ('pt' or 'safetensors').
+            config: Optional model configuration to save as config.json.
+
+        Returns:
+            Path to the saved model file.
+        """
+        try:
+            root_dir = self.local_dir.parent
+            
+            # Save config if provided or available on model
+            model_config = config
+            if model_config is None and hasattr(model, "config"):
+                model_config = model.config
+            
+            if model_config is not None:
+                config_path = root_dir / "config.json"
+                # User wants full details (including defaults), so we prefer to_dict() over save_pretrained()
+                if hasattr(model_config, "to_dict"):
+                    with open(config_path, "w") as f:
+                        json.dump(model_config.to_dict(), f, indent=2)
+                elif isinstance(model_config, dict):
+                    with open(config_path, "w") as f:
+                        json.dump(model_config, f, indent=2)
+                elif hasattr(model_config, "save_pretrained"):
+                    model_config.save_pretrained(root_dir)
+                logger.info(f"Saved config to {config_path}")
+
+            # Save model weights
+            if format == "safetensors":
+                if not SAFETENSORS_AVAILABLE:
+                    raise ImportError("safetensors is not installed. Install it with 'pip install safetensors'.")
+                
+                path = root_dir / f"{name}.safetensors"
+                save_safetensors(model.state_dict(), path)
+            else:
+                path = root_dir / f"{name}.pt"
+                torch.save(model.state_dict(), path)
+            
+            logger.info(f"Saved final model to {path}")
+            return str(path)
+
+        except Exception as e:
+            raise CheckpointError(f"Failed to save final model: {e}")
 
     def load(
         self,

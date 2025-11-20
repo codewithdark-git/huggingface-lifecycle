@@ -285,10 +285,20 @@ def main():
     # Show summary
     print("\n" + metadata_tracker.get_summary())
     
+    # Save final model
+    print("\n💾 Step 7: Saving Final Model")
+    ckpt_mgr.save_final_model(
+        model=model,
+        name="final_model",
+        format="safetensors", # Options: 'pt' or 'safetensors'
+        config=config
+    )
+    print("✓ Saved final model to root directory (final_model.safetensors)")
+
     # ========================================================================
     # MODEL REGISTRATION (Optional)
     # ========================================================================
-    print("\n📦 Step 7: Model Registration (Optional)")
+    print("\n📦 Step 8: Model Registration (Optional)")
     print("To register your model to HuggingFace Hub:")
     print("  registry = ModelRegistry(repo_mgr)")
     print("  # Register custom model")

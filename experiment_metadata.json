@@ -1,5 +1,5 @@
 {
-  "created_at": "2025-11-20T16:24:17.773008",
+  "created_at": "2025-11-20T16:50:16.578890",
   "system": {
     "platform": "Windows-11-10.0.22621-SP0",
     "python_version": "3.13.9 (tags/v3.13.9:8183fa5, Oct 14 2025, 14:09:13) [MSC v.1944 64 bit (AMD64)]",
@@ -21,7 +21,7 @@
       "pandas": "2.3.3"
     },
     "git": {
-      "commit": "1fe352fa7a6e5de0bac4c0dddd316cebdc2bf795",
+      "commit": "f9180f5e4fa9f7b622bd4dd6eae2a456123175bd",
       "branch": "main",
       "dirty": true
     }
@@ -38,68 +38,68 @@
       {
         "step": 0,
         "metrics": {
-          "train_loss": 2.332124024629593,
-          "train_accuracy": 0.097,
-          "val_loss": 2.348015138081142,
-          "val_accuracy": 0.085
+          "train_loss": 2.3194612488150597,
+          "train_accuracy": 0.105,
+          "val_loss": 2.309777702604021,
+          "val_accuracy": 0.08
         },
-        "timestamp": "2025-11-20T16:24:18.528375"
+        "timestamp": "2025-11-20T16:50:17.957311"
       },
       {
         "step": 1,
         "metrics": {
-          "train_loss": 1.7466501258313656,
-          "train_accuracy": 0.767,
-          "val_loss": 2.362065996442522,
-          "val_accuracy": 0.095
+          "train_loss": 1.71123655885458,
+          "train_accuracy": 0.784,
+          "val_loss": 2.3259353978293285,
+          "val_accuracy": 0.1
         },
-        "timestamp": "2025-11-20T16:24:18.674191"
+        "timestamp": "2025-11-20T16:50:18.804924"
       },
       {
         "step": 2,
         "metrics": {
-          "train_loss": 1.2271772474050522,
-          "train_accuracy": 0.948,
-          "val_loss": 2.468589816774641,
-          "val_accuracy": 0.095
+          "train_loss": 1.175220599398017,
+          "train_accuracy": 0.955,
+          "val_loss": 2.413731711251395,
+          "val_accuracy": 0.1
         },
-        "timestamp": "2025-11-20T16:24:18.809918"
+        "timestamp": "2025-11-20T16:50:20.226565"
       },
       {
         "step": 3,
         "metrics": {
-          "train_loss": 0.7142637912184,
-          "train_accuracy": 0.991,
-          "val_loss": 2.594510453087943,
-          "val_accuracy": 0.095
+          "train_loss": 0.6622296720743179,
+          "train_accuracy": 0.985,
+          "val_loss": 2.5107323101588657,
+          "val_accuracy": 0.115
         },
-        "timestamp": "2025-11-20T16:24:18.989972"
+        "timestamp": "2025-11-20T16:50:20.556793"
       },
       {
         "step": 4,
         "metrics": {
-          "train_loss": 0.3446523705497384,
-          "train_accuracy": 0.999,
-          "val_loss": 2.8348162855420793,
-          "val_accuracy": 0.08
+          "train_loss": 0.3240619786083698,
+          "train_accuracy": 1.0,
+          "val_loss": 2.683663947241647,
+          "val_accuracy": 0.12
         },
-        "timestamp": "2025-11-20T16:24:19.233417"
+        "timestamp": "2025-11-20T16:50:21.033215"
       },
       {
         "step": 5,
         "metrics": {
-          "train_loss": 0.18462318554520607,
+          "train_loss": 0.1689971424639225,
           "train_accuracy": 1.0,
-          "val_loss": 2.8365439687456404,
-          "val_accuracy": 0.075
+          "val_loss": 2.715823377881731,
+          "val_accuracy": 0.11
         },
-        "timestamp": "2025-11-20T16:24:19.623912"
+        "timestamp": "2025-11-20T16:50:21.544122"
       }
     ],
     "final": {
-      "final_val_loss": 2.8365439687456404,
-      "final_val_accuracy": 0.075,
-      "best_val_loss": 2.348015138081142
+      "final_val_loss": 2.715823377881731,
+      "final_val_accuracy": 0.11,
+      "best_val_loss": 2.309777702604021
     }
   },
   "custom": {}
