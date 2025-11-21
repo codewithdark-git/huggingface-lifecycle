@@ -22,13 +22,23 @@ A production-ready Python package for comprehensive lifecycle management of Hugg
 
 ## 📥 Installation
 
+### From GitHub (Recommended)
+
+Install directly from GitHub using pip:
+
+```bash
+pip install git+https://github.com/codewithdark-git/huggingface-lifecycle.git
+```
+
 ### From PyPI
 
 ```bash
 pip install huggingface-lifecycle
 ```
 
-### From Source
+### From Source (Development)
+
+Clone the repository and install in editable mode:
 
 ```bash
 git clone https://github.com/codewithdark-git/huggingface-lifecycle.git
