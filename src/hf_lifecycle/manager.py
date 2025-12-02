@@ -80,11 +80,24 @@ class HFManager:
         self.scheduler = scheduler
         
         # Initialize sub-managers
-        self.repo_manager = RepoManager(
-            repo_id=repo_id,
-            token=hf_token,
-            private=private
-        ) if repo_id else None
+        # Create AuthManager if we have a repo_id
+        if repo_id:
+            from hf_lifecycle.auth import AuthManager
+            auth_manager = AuthManager(token=hf_token)
+            self.repo_manager = RepoManager(auth_manager=auth_manager)
+            # Create repo if it doesn't exist
+            try:
+                self.repo_manager.create_repo(
+                    repo_id=repo_id,
+                    private=private,
+                    exist_ok=True
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Could not create/verify repo {repo_id}: {e}")
+        else:
+            self.repo_manager = None
         
         self.metadata_tracker = MetadataTracker()
         
