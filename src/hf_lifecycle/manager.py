@@ -432,7 +432,6 @@ class HFManager:
         config: Optional[Any] = None,
         repo_id: Optional[str] = None,
         model_name: Optional[str] = None,
-        description: str = "",
         push_to_hub: bool = False,
         commit_message: str = "Upload custom model",
     ) -> Optional[str]:
@@ -444,7 +443,6 @@ class HFManager:
             config: Custom config (must inherit from PretrainedConfig).
             repo_id: Repository ID (uses self.repo_id if not provided).
             model_name: Name for the model.
-            description: Model description.
             push_to_hub: Whether to push to Hub after registration.
             commit_message: Commit message for the upload.
             
@@ -464,8 +462,7 @@ class HFManager:
             model=model,
             config=config,
             repo_id=repo_id,
-            model_name=model_name,
-            description=description,
+            model_type=model_name,
             push_to_hub=push_to_hub,
             commit_message=commit_message
         )
