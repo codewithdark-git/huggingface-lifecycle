@@ -168,6 +168,12 @@ class ModelRegistry:
         try:
             from transformers import AutoConfig, AutoModel, PretrainedConfig, PreTrainedModel
 
+            model, config = ensure_hf_compatible(
+                model=model,
+                config=config,
+                model_type=model_type,
+            )
+
             if not isinstance(config, PretrainedConfig):
                 raise ModelRegistryError("Config must inherit from PretrainedConfig")
             
@@ -391,3 +397,102 @@ class ModelRegistry:
 
         except Exception as e:
             raise ModelRegistryError(f"Failed to update model card: {e}")
+
+
+
+import copy
+import torch
+from transformers import PretrainedConfig, PreTrainedModel
+
+
+def ensure_hf_compatible(
+    model: torch.nn.Module,
+    config: object,
+    model_type: str,
+):
+    """
+    Convert arbitrary PyTorch model/config into Hugging Face compatible objects.
+
+    Returns:
+        (model, config)
+    """
+
+    # ------------------------------------------------------------------
+    # Config Wrapper
+    # ------------------------------------------------------------------
+
+    if not isinstance(config, PretrainedConfig):
+
+        original_config = config
+
+        class AutoConfigWrapper(PretrainedConfig):
+            model_type = model_type
+
+            def __init__(self, original_config=None, **kwargs):
+                super().__init__(**kwargs)
+
+                self.original_config = original_config
+
+                # Copy attributes from original config
+                if original_config is not None:
+                    if hasattr(original_config, "__dict__"):
+                        for k, v in vars(original_config).items():
+                            setattr(self, k, copy.deepcopy(v))
+
+            def to_dict(self):
+                data = super().to_dict()
+
+                if self.original_config is not None:
+                    if hasattr(self.original_config, "__dict__"):
+                        data.update(vars(self.original_config))
+
+                return data
+
+        config = AutoConfigWrapper(original_config)
+
+    # ------------------------------------------------------------------
+    # Model Wrapper
+    # ------------------------------------------------------------------
+
+    if not isinstance(model, PreTrainedModel):
+
+        original_model = model
+
+        class AutoModelWrapper(PreTrainedModel):
+
+            config_class = config.__class__
+
+            def __init__(self, config, wrapped_model):
+                super().__init__(config)
+
+                self.wrapped_model = wrapped_model
+
+            def forward(self, *args, **kwargs):
+                return self.wrapped_model(*args, **kwargs)
+
+            def get_input_embeddings(self):
+                if hasattr(self.wrapped_model, "get_input_embeddings"):
+                    return self.wrapped_model.get_input_embeddings()
+                return None
+
+            def set_input_embeddings(self, value):
+                if hasattr(self.wrapped_model, "set_input_embeddings"):
+                    self.wrapped_model.set_input_embeddings(value)
+
+            def get_output_embeddings(self):
+                if hasattr(self.wrapped_model, "get_output_embeddings"):
+                    return self.wrapped_model.get_output_embeddings()
+                return None
+
+            def state_dict(self, *args, **kwargs):
+                return self.wrapped_model.state_dict(*args, **kwargs)
+
+            def load_state_dict(self, state_dict, strict=True):
+                return self.wrapped_model.load_state_dict(
+                    state_dict,
+                    strict=strict,
+                )
+
+        model = AutoModelWrapper(config, original_model)
+
+    return model, config
