@@ -431,7 +431,7 @@ class HFManager:
         model: Optional[torch.nn.Module] = None,
         config: Optional[Any] = None,
         repo_id: Optional[str] = None,
-        model_name: Optional[str] = None,
+        model_type: Optional[str] = None,
         push_to_hub: bool = False,
         commit_message: str = "Upload custom model",
     ) -> Optional[str]:
@@ -442,7 +442,7 @@ class HFManager:
             model: Custom model to register (uses self.model if not provided).
             config: Custom config (must inherit from PretrainedConfig).
             repo_id: Repository ID (uses self.repo_id if not provided).
-            model_name: Name for the model.
+            model_type: Name for the model.
             push_to_hub: Whether to push to Hub after registration.
             commit_message: Commit message for the upload.
             
@@ -462,7 +462,7 @@ class HFManager:
             model=model,
             config=config,
             repo_id=repo_id,
-            model_type=model_name,
+            model_type=model_type,
             push_to_hub=push_to_hub,
             commit_message=commit_message
         )
