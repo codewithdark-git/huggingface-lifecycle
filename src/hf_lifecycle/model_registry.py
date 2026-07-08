@@ -170,12 +170,12 @@ class ModelRegistry:
 
             if not isinstance(config, PretrainedConfig):
                 class AutoConfigWrapper(PretrainedConfig):
-                    model_type = model_type
             
                     def __init__(self, **kwargs):
                         super().__init__(**kwargs)
                         self.original_config = config
-            
+
+                AutoConfigWrapper.model_type = model_type
                 config = AutoConfigWrapper()
             
             if not isinstance(model, PreTrainedModel):
@@ -204,9 +204,9 @@ class ModelRegistry:
             # Actually it's usually: CustomConfig.register_for_auto_class()
             
             if hasattr(config.__class__, "register_for_auto_class"):
-                config.__class__.register_for_auto_class(model_type)
+                config.__class__.register_for_auto_class()
             if hasattr(model.__class__, "register_for_auto_class"):
-                model.__class__.register_for_auto_class(model_type)
+                model.__class__.register_for_auto_class("AutoModel")
                 
             logger.info("Called register_for_auto_class on config and model classes")
 
