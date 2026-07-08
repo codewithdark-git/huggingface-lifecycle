@@ -168,17 +168,34 @@ class ModelRegistry:
         try:
             from transformers import AutoConfig, AutoModel, PretrainedConfig, PreTrainedModel
 
-            model, config = ensure_hf_compatible(
-                model=model,
-                config=config,
-                model_type=model_type,
-            )
+            # model, config = ensure_hf_compatible(
+            #     model=model,
+            #     config=config,
+            #     model_type=model_type,
+            # )
 
             if not isinstance(config, PretrainedConfig):
-                raise ModelRegistryError("Config must inherit from PretrainedConfig")
+                class AutoConfigWrapper(PretrainedConfig):
+                    model_type = model_type
+            
+                    def __init__(self, **kwargs):
+                        super().__init__(**kwargs)
+                        self.original_config = config
+            
+                config = AutoConfigWrapper()
             
             if not isinstance(model, PreTrainedModel):
-                raise ModelRegistryError("Model must inherit from PreTrainedModel")
+                class AutoModelWrapper(PreTrainedModel):
+                    config_class = config.__class__
+            
+                    def __init__(self, config, wrapped_model):
+                        super().__init__(config)
+                        self.wrapped_model = wrapped_model
+            
+                    def forward(self, *args, **kwargs):
+                        return self.wrapped_model(*args, **kwargs)
+            
+                model = AutoModelWrapper(config, model)
 
             # 1. Register classes
             AutoConfig.register(model_type, config.__class__)
